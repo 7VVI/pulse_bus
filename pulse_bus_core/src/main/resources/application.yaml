@@ -1,0 +1,38 @@
+message:
+  queue:
+    enabled: true
+    default-provider: disruptor
+    batch-consume:
+      enabled: true
+      default-batch-size: 20
+      default-batch-timeout-ms: 1000
+      default-max-wait-time-ms: 5000
+      enable-partial-consume: true
+      max-retry-count: 3
+    providers:
+      disruptor:
+        buffer-size: 2048
+        wait-strategy: BlockingWaitStrategy
+        consumer-threads: 4
+        enable-metrics: true
+      redis:
+        host: localhost
+        port: 6379
+        password:
+        database: 0
+        timeout: 3000
+      rabbitmq:
+        host: localhost
+        port: 5672
+        username: guest
+        password: guest
+        virtual-host: /
+    retry-policy:
+      max-retry-count: 5
+      retry-delay-ms: 1000
+      max-retry-delay-ms: 60000
+      backoff-multiplier: 2.0
+    monitor-config:
+      enable-metrics: true
+      enable-health-check: true
+      metrics-collect-interval-ms: 30000
