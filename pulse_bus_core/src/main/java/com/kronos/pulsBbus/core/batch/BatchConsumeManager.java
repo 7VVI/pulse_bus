@@ -1,7 +1,6 @@
 package com.kronos.pulsBbus.core.batch;
 
 import com.kronos.pulsBbus.core.Message;
-import com.kronos.pulsBbus.core.MessageBuffer;
 
 import java.util.List;
 import java.util.Map;

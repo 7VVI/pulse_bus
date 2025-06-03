@@ -12,10 +12,10 @@ import java.io.Serializable;
  * 消息发送结果
  */
 public class SendResult implements Serializable {
-    private boolean success;
-    private String messageId;
-    private String errorMessage;
-    private long timestamp;
+    private final boolean success;
+    private final String  messageId;
+    private       String  errorMessage;
+    private       long    timestamp;
 
     // 构造函数和getter/setter
     public SendResult(boolean success, String messageId) {
@@ -30,9 +30,23 @@ public class SendResult implements Serializable {
         this.errorMessage = errorMessage;
     }
 
-    public boolean isSuccess() { return success; }
-    public String getMessageId() { return messageId; }
-    public String getErrorMessage() { return errorMessage; }
-    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
-    public long getTimestamp() { return timestamp; }
+    public boolean isSuccess() {
+        return success;
+    }
+
+    public String getMessageId() {
+        return messageId;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
 }

@@ -1,6 +1,6 @@
-package com.kronos.pulsBbus.core;
+package com.kronos.pulsBbus.core.batch;
 
-import com.kronos.pulsBbus.core.batch.BatchConsumeConfig;
+import com.kronos.pulsBbus.core.Message;
 
 import java.util.List;
 

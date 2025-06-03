@@ -4,9 +4,7 @@ import com.kronos.pulsBbus.core.ConsumeResult;
 import com.kronos.pulsBbus.core.Message;
 import com.kronos.pulsBbus.core.monitor.MessageQueueMetrics;
 import com.kronos.pulsBbus.core.single.MessageConsumer;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.kronos.pulsBbus.disruptor.DisruptorRetryHandler;
 
 /**
  * @author zhangyh
@@ -15,78 +13,91 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DisruptorMessageEventHandler implements com.lmax.disruptor.EventHandler<DisruptorMessageEvent> {
 
-    private final MessageQueueMetrics metrics;
 
-    private final Map<String, MessageConsumer> consumers = new ConcurrentHashMap<>();
+    private final String                topic;
+    private final MessageConsumer consumer;
+    private final MessageQueueMetrics   metrics;
+    private final DisruptorRetryHandler retryHandler;
 
-    public DisruptorMessageEventHandler() {
-        this.metrics = new MessageQueueMetrics();
-    }
-
-    /**
-     * 注册消费者
-     */
-    public void registerConsumer(String topic, MessageConsumer consumer) {
-        consumers.put(topic, consumer);
-    }
-
-    /**
-     * 移除消费者
-     */
-    public void removeConsumer(String topic) {
-        consumers.remove(topic);
+    public DisruptorMessageEventHandler(String topic,
+                                        MessageConsumer consumer,
+                                        MessageQueueMetrics metrics,
+                                        DisruptorRetryHandler retryHandler) {
+        this.topic = topic;
+        this.consumer = consumer;
+        this.metrics = metrics;
+        this.retryHandler = retryHandler;
     }
 
     @Override
     public void onEvent(DisruptorMessageEvent event, long sequence, boolean endOfBatch) throws Exception {
+        if (event.isProcessed() || event.getMessage() == null) {
+            return;
+        }
+
         long startTime = System.currentTimeMillis();
-        String topic = event.getTopic();
-        MessageConsumer consumer = consumers.get(topic);
-        if (consumer != null) {
-            try {
-                // 转换为标准Message对象
-                Message message = convertToMessage(event);
-                ConsumeResult result = consumer.consume(message);
-                String topicName = event.getTopic();
-                // 记录消费指标
-                metrics.recordReceivedMessage(topicName);
-                metrics.recordConsumeLatency(topicName, System.currentTimeMillis() - startTime);
+        Message message = event.getMessage();
 
-                switch (result) {
-                    case SUCCESS:
-                        metrics.recordConsumeSuccess(topicName);
-                        break;
-                    case RETRY:
-                        metrics.recordConsumeRetry(topicName);
-                        break;
-                    case FAILED:
-                        metrics.recordConsumeFailed(topicName);
-                        break;
-                    case SUSPEND:
-                        metrics.recordConsumeSuspend(topicName);
-                        break;
-                }
-
-
-            } catch (Exception e) {
-                System.err.println("Disruptor事件处理异常: " + e.getMessage());
+        try {
+            // 记录接收消息
+            if (metrics != null) {
+                metrics.recordReceivedMessage(topic);
             }
+
+            // 执行消费
+            ConsumeResult result = consumer.consume(message);
+
+            // 记录消费延迟
+            if (metrics != null) {
+                metrics.recordConsumeLatency(topic, System.currentTimeMillis() - startTime);
+            }
+
+            // 处理消费结果
+            handleConsumeResult(event, result);
+
+        } catch (Exception e) {
+            System.err.println("Disruptor消息消费异常 - Topic: " + topic +
+                    ", MessageId: " + message.getId() + ", 错误: " + e.getMessage());
+
+            if (metrics != null) {
+                metrics.recordConsumeFailed(topic);
+            }
+
+            // 处理异常
+            handleConsumeException(event, e);
+        } finally {
+            event.setProcessed(true);
         }
     }
 
-    /**
-     * 转换事件为消息
-     */
-    private Message convertToMessage(DisruptorMessageEvent event) {
-        Message message = new Message();
-        message.setId(event.getEventId());
-        message.setTopic(event.getTopic());
-        message.setPayload(event.getPayload());
-        message.setProperties(event.getProperties());
-        message.setTimestamp(java.time.LocalDateTime.ofInstant(
-                java.time.Instant.ofEpochMilli(event.getTimestamp()),
-                java.time.ZoneId.systemDefault()
-        ));
-        return message;
+    private void handleConsumeResult(DisruptorMessageEvent event, ConsumeResult result) {
+        Message message = event.getMessage();
+
+        switch (result) {
+            case SUCCESS:
+                if (metrics != null) {
+                    metrics.recordConsumeSuccess(topic);
+                }
+                break;
+            case RETRY:
+                if (metrics != null) {
+                    metrics.recordConsumeFailed(topic);
+                }
+                retryHandler.handleRetry(event);
+                break;
+            case SUSPEND:
+                System.out.println("消息消费被暂停 - MessageId: " + message.getId());
+                break;
+            case FAILED:
+                if (metrics != null) {
+                    metrics.recordConsumeFailed(topic);
+                }
+                retryHandler.handleFailed(event);
+                break;
+        }
+    }
+
+    private void handleConsumeException(DisruptorMessageEvent event, Exception e) {
+        retryHandler.handleException(event, e);
     }
 }

@@ -48,4 +48,8 @@ public class BatchSendResult implements Serializable {
     public java.util.List<SendResult> getResults() {
         return results;
     }
+
+    public void addResult(SendResult result) {
+        results.add(result);
+    }
 }

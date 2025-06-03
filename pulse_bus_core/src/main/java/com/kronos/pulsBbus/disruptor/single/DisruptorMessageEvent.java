@@ -1,8 +1,6 @@
 package com.kronos.pulsBbus.disruptor.single;
 
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import com.kronos.pulsBbus.core.Message;
 
 /**
  * @author zhangyh
@@ -10,39 +8,68 @@ import java.util.concurrent.ConcurrentHashMap;
  * @desc
  */
 public class DisruptorMessageEvent {
-    private String              eventId;
-    private String              topic;
-    private Object              payload;
-    private long                timestamp;
-    private Map<String, Object> properties;
+    private Message message;
+    private String  topic;
+    private long    timestamp;
+    private boolean processed  = false;
+    private int     retryCount = 0;
 
     public DisruptorMessageEvent() {
-        this.eventId = UUID.randomUUID().toString();
-        this.timestamp = System.currentTimeMillis();
-        this.properties = new ConcurrentHashMap<>();
     }
 
-    // 清空事件数据，用于对象复用
-    public void clear() {
-        this.eventId = null;
+    public void reset() {
+        this.message = null;
         this.topic = null;
-        this.payload = null;
-        this.timestamp = 0L;
-        if (this.properties != null) {
-            this.properties.clear();
-        }
+        this.timestamp = 0;
+        this.processed = false;
+        this.retryCount = 0;
     }
 
-    // Getters and Setters
-    public String getEventId() { return eventId; }
-    public void setEventId(String eventId) { this.eventId = eventId; }
-    public String getTopic() { return topic; }
-    public void setTopic(String topic) { this.topic = topic; }
-    public Object getPayload() { return payload; }
-    public void setPayload(Object payload) { this.payload = payload; }
-    public long getTimestamp() { return timestamp; }
-    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
-    public Map<String, Object> getProperties() { return properties; }
-    public void setProperties(Map<String, Object> properties) { this.properties = properties; }
+    public void set(String topic, Message message) {
+        this.topic = topic;
+        this.message = message;
+        this.timestamp = System.currentTimeMillis();
+        this.processed = false;
+        this.retryCount = 0;
+    }
+    public Message getMessage() {
+        return message;
+    }
+
+    public void setMessage(Message message) {
+        this.message = message;
+    }
+
+    public String getTopic() {
+        return topic;
+    }
+
+    public void setTopic(String topic) {
+        this.topic = topic;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public boolean isProcessed() {
+        return processed;
+    }
+
+    public void setProcessed(boolean processed) {
+        this.processed = processed;
+    }
+
+    public int getRetryCount() {
+        return retryCount;
+    }
+
+    public void setRetryCount(int retryCount) {
+        this.retryCount = retryCount;
+    }
 }
 
