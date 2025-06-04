@@ -4,6 +4,8 @@ import com.kronos.pulsBbus.core.MessageQueueProvider;
 import com.kronos.pulsBbus.core.monitor.MessageQueueMetrics;
 import com.kronos.pulsBbus.core.properties.MessageQueueProperties;
 import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -18,6 +20,8 @@ import java.util.Map;
         havingValue = "disruptor"
 )
 public class DisruptorMessageQueueProvider implements MessageQueueProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(DisruptorMessageQueueProvider.class);
 
     private final MessageQueueProperties properties;
     private final MessageQueueMetrics    metrics;
@@ -57,7 +61,7 @@ public class DisruptorMessageQueueProvider implements MessageQueueProvider {
         }
 
         try {
-            System.out.println("初始化Disruptor消息队列提供者...");
+            log.info(">>>>>> 初始化Disruptor消息队列提供者...");
 
             // 验证配置
             validateConfiguration();
@@ -66,10 +70,9 @@ public class DisruptorMessageQueueProvider implements MessageQueueProvider {
             this.template = new DisruptorMessageQueueTemplate(disruptorProperties, metrics, retryHandler);
 
             this.initialized = true;
-            System.out.println("Disruptor消息队列提供者初始化成功");
-
+            log.info("<<<<<< Disruptor消息队列提供者初始化成功");
         } catch (Exception e) {
-            System.err.println("Disruptor消息队列提供者初始化失败: " + e.getMessage());
+            log.error("Disruptor消息队列提供者初始化失败", e);
             throw new RuntimeException("Disruptor提供者初始化失败", e);
         }
     }
@@ -90,7 +93,7 @@ public class DisruptorMessageQueueProvider implements MessageQueueProvider {
         }
 
         initialized = false;
-        System.out.println("Disruptor消息队列提供者已关闭");
+        log.info("Disruptor消息队列提供者已关闭");
     }
 
     /**

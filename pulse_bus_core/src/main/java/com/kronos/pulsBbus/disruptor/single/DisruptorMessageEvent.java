@@ -32,6 +32,7 @@ public class DisruptorMessageEvent {
         this.processed = false;
         this.retryCount = 0;
     }
+
     public Message getMessage() {
         return message;
     }

@@ -5,6 +5,8 @@ import com.kronos.pulsBbus.core.Message;
 import com.kronos.pulsBbus.core.monitor.MessageQueueMetrics;
 import com.kronos.pulsBbus.core.single.MessageConsumer;
 import com.kronos.pulsBbus.disruptor.DisruptorRetryHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author zhangyh
@@ -13,6 +15,7 @@ import com.kronos.pulsBbus.disruptor.DisruptorRetryHandler;
  */
 public class DisruptorMessageEventHandler implements com.lmax.disruptor.EventHandler<DisruptorMessageEvent> {
 
+    private static final Logger log = LoggerFactory.getLogger(DisruptorMessageEventHandler.class);
 
     private final String                topic;
     private final MessageConsumer consumer;
@@ -56,8 +59,7 @@ public class DisruptorMessageEventHandler implements com.lmax.disruptor.EventHan
             handleConsumeResult(event, result);
 
         } catch (Exception e) {
-            System.err.println("Disruptor消息消费异常 - Topic: " + topic +
-                    ", MessageId: " + message.getId() + ", 错误: " + e.getMessage());
+            log.error("Disruptor消息消费异常 - Topic: {}, MessageId: {}, 错误: {}", topic, message.getId(), e.getMessage());
 
             if (metrics != null) {
                 metrics.recordConsumeFailed(topic);
@@ -86,7 +88,7 @@ public class DisruptorMessageEventHandler implements com.lmax.disruptor.EventHan
                 retryHandler.handleRetry(event);
                 break;
             case SUSPEND:
-                System.out.println("消息消费被暂停 - MessageId: " + message.getId());
+                log.warn("消息消费被暂停 - MessageId: {}, Topic: {}", message.getId(), topic);
                 break;
             case FAILED:
                 if (metrics != null) {

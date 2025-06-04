@@ -18,6 +18,8 @@ import com.lmax.disruptor.RingBuffer;
 import com.lmax.disruptor.WaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 
@@ -29,7 +31,8 @@ import java.time.LocalDateTime;
 @org.springframework.stereotype.Component
 public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
 
-    private final DisruptorProperties   properties;
+    private static final Logger              log = LoggerFactory.getLogger(DisruptorMessageQueueTemplate.class);
+    private final        DisruptorProperties properties;
     private final MessageQueueMetrics   metrics;
     private final DisruptorRetryHandler retryHandler;
 
@@ -165,8 +168,7 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
         // 保存引用
         messageDisruptors.put(topic, disruptor);
         messageRingBuffers.put(topic, ringBuffer);
-
-        System.out.println("Disruptor订阅成功 - Topic: " + topic + ", RingBuffer大小: " + ringBufferSize);
+        log.info("Disruptor订阅成功 - Topic: {}, RingBuffer大小: {}", topic, ringBufferSize);
     }
 
     @Override
@@ -177,8 +179,7 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
             disruptor.shutdown();
         }
         messageRingBuffers.remove(topic);
-
-        System.out.println("Disruptor取消订阅 - Topic: " + topic);
+        log.info("Disruptor取消订阅成功 - Topic: {}", topic);
     }
 
     /**
@@ -213,10 +214,7 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
         // 保存引用
         batchDisruptors.put(topic, batchDisruptor);
         batchRingBuffers.put(topic, batchRingBuffer);
-
-        System.out.println("Disruptor批量订阅成功 - Topic: " + topic +
-                ", 批次大小: " + properties.getBatch().getBatchSize() +
-                ", 超时时间: " + properties.getBatch().getBatchTimeoutMs() + "ms");
+         log.info("Disruptor批量订阅成功 - Topic: {}, 批次大小: {}, 超时时间: {}ms", topic, properties.getBatch().getBatchSize(), properties.getBatch().getBatchTimeoutMs());
     }
 
     /**
@@ -228,8 +226,7 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
             batchDisruptor.shutdown();
         }
         batchRingBuffers.remove(topic);
-
-        System.out.println("Disruptor批量取消订阅 - Topic: " + topic);
+        log.info("Disruptor批量取消订阅成功 - Topic: {}", topic);
     }
 
     /**
@@ -268,8 +265,7 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
 
             // 设置默认处理器（丢弃消息）
             disruptor.handleEventsWith((event, sequence, endOfBatch) -> {
-                System.out.println("消息被丢弃，没有订阅者 - Topic: " + t +
-                        ", MessageId: " + (event.getMessage() != null ? event.getMessage().getId() : "null"));
+                log.info("消息被丢弃，没有订阅者 - Topic: {}, MessageId: {}", event.getTopic(), event.getMessage().getId());
                 event.setProcessed(true);
             });
 
@@ -349,7 +345,6 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
         for (Disruptor<DisruptorBatchEvent> disruptor : batchDisruptors.values()) {
             disruptor.shutdown();
         }
-
-        System.out.println("DisruptorMessageQueueTemplate已关闭");
+        log.info("DisruptorMessageQueueTemplate已关闭");
     }
 }

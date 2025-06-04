@@ -4,6 +4,8 @@ import com.kronos.pulsBbus.core.Message;
 import com.kronos.pulsBbus.core.batch.BatchConsumeResult;
 import com.kronos.pulsBbus.disruptor.batch.DisruptorBatchEvent;
 import com.kronos.pulsBbus.disruptor.single.DisruptorMessageEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author zhangyh
@@ -12,6 +14,8 @@ import com.kronos.pulsBbus.disruptor.single.DisruptorMessageEvent;
  */
 @org.springframework.stereotype.Component
 public class DisruptorRetryHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(DisruptorRetryHandler.class);
 
     private final DisruptorProperties properties;
     private final java.util.concurrent.ScheduledExecutorService retryExecutor;
@@ -41,10 +45,7 @@ public class DisruptorRetryHandler {
                 event.setRetryCount(currentRetryCount + 1);
                 republishMessage(event);
             }, delay, java.util.concurrent.TimeUnit.MILLISECONDS);
-
-            System.out.println("消息重试调度 - MessageId: " + message.getId() +
-                    ", 重试次数: " + (currentRetryCount + 1) +
-                    ", 延迟: " + delay + "ms");
+            log.info("消息重试调度 - MessageId: {}, 重试次数: {}, 延迟: {}ms", message.getId(), currentRetryCount + 1, delay);
         } else {
             handleFailed(event);
         }
@@ -123,21 +124,22 @@ public class DisruptorRetryHandler {
     private void republishMessage(DisruptorMessageEvent event) {
         // 这里需要访问到原始的RingBuffer来重新发布
         // 实际实现中需要通过回调或者其他方式来处理
-        System.out.println("重新发布消息 - MessageId: " + event.getMessage().getId());
+        log.warn("消息重试 - MessageId: {}, 重试次数: {}", event.getMessage().getId(), event.getRetryCount());
     }
 
     /**
      * 重新发布批量消息
      */
     private void republishBatchMessages(String topic, java.util.List<Message> messages) {
-        System.out.println("重新发布批量消息 - Topic: " + topic + ", 数量: " + messages.size());
+        log.warn("批量消息重试 - Topic: {}, 数量: {}", topic, messages.size());
+
     }
 
     /**
      * 发送到死信队列
      */
     private void sendToDeadLetterQueue(Message message) {
-        System.err.println("消息发送到死信队列 - MessageId: " + message.getId());
+        log.warn("消息发送到死信队列 - MessageId: {}", message.getId());
         // 实现死信队列逻辑
     }
 
