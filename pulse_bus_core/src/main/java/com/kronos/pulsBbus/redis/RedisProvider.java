@@ -1,9 +1,8 @@
 package com.kronos.pulsBbus.redis;
 
 import com.kronos.pulsBbus.core.MessageQueueProvider;
+import com.kronos.pulsBbus.core.properties.BaseProviderConfig;
 import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
-
-import java.util.Map;
 
 /**
  * @author zhangyh
@@ -26,9 +25,10 @@ public class RedisProvider implements MessageQueueProvider {
     }
 
     @Override
-    public void initialize(Map<String, Object> config) {
-        // 初始化Redis配置
+    public <T extends BaseProviderConfig> void initialize(T config) {
+
     }
+
 
     @Override
     public boolean isHealthy() {

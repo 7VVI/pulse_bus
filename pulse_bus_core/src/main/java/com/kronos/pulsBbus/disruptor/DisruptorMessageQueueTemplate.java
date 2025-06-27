@@ -28,13 +28,13 @@ import java.time.LocalDateTime;
  * @Date 2025/6/3 8:46
  * @desc
  */
-@org.springframework.stereotype.Component
 public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
 
     private static final Logger              log = LoggerFactory.getLogger(DisruptorMessageQueueTemplate.class);
-    private final        DisruptorProperties properties;
-    private final MessageQueueMetrics   metrics;
-    private final DisruptorRetryHandler retryHandler;
+
+    private final DisruptorProperties disruptorConfig;
+    private final MessageQueueMetrics                    metrics;
+    private final DisruptorRetryHandler                  retryHandler;
 
     // 单消息处理相关
     private final java.util.Map<String, RingBuffer<DisruptorMessageEvent>> messageRingBuffers = new java.util.concurrent.ConcurrentHashMap<>();
@@ -42,7 +42,7 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
 
     // 批量消息处理相关
     private final java.util.Map<String, RingBuffer<DisruptorBatchEvent>> batchRingBuffers = new java.util.concurrent.ConcurrentHashMap<>();
-    private final java.util.Map<String, Disruptor<DisruptorBatchEvent>> batchDisruptors = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, Disruptor<DisruptorBatchEvent>>  batchDisruptors  = new java.util.concurrent.ConcurrentHashMap<>();
 
     // 线程工厂
     private final java.util.concurrent.ThreadFactory threadFactory;
@@ -50,10 +50,9 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
     public DisruptorMessageQueueTemplate(DisruptorProperties properties,
                                          MessageQueueMetrics metrics,
                                          DisruptorRetryHandler retryHandler) {
-        this.properties = properties;
         this.metrics = metrics;
         this.retryHandler = retryHandler;
-
+        this.disruptorConfig = properties;
         // 创建线程工厂
         this.threadFactory = new java.util.concurrent.ThreadFactory() {
             private final java.util.concurrent.atomic.AtomicInteger threadNumber = new java.util.concurrent.atomic.AtomicInteger(1);
@@ -145,9 +144,11 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
     @Override
     public void subscribe(String topic, MessageConsumer consumer) {
         // 创建单消息处理的Disruptor
-        int ringBufferSize = DisruptorUtils.nextPowerOfTwo(properties.getRingBufferSize());
-        WaitStrategy waitStrategy = DisruptorUtils.createWaitStrategy(properties.getWaitStrategy());
-        ProducerType producerType = DisruptorUtils.createProducerType(properties.getProducerType());
+        int ringBufferSize = DisruptorUtils.nextPowerOfTwo(disruptorConfig.getRingBufferSize());
+        String disruptorConfigWaitStrategy = disruptorConfig.getWaitStrategy();
+        WaitStrategy waitStrategy = DisruptorUtils.createWaitStrategy(disruptorConfigWaitStrategy);
+        String configProducerType = disruptorConfig.getProducerType();
+        ProducerType producerType = DisruptorUtils.createProducerType(configProducerType);
 
         Disruptor<DisruptorMessageEvent> disruptor = new Disruptor<>(
                 new DisruptorMessageEventFactory(),
@@ -186,14 +187,16 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
      * 订阅批量消息
      */
     public void subscribeBatch(String topic, BatchMessageConsumer consumer) {
-        if (!properties.getBatch().isEnabled()) {
+        if (!disruptorConfig.getBatch().isEnabled()) {
             throw new IllegalStateException("批量消费未启用");
         }
 
         // 创建批量处理的Disruptor
-        int ringBufferSize = DisruptorUtils.nextPowerOfTwo(properties.getRingBufferSize());
-        WaitStrategy waitStrategy = DisruptorUtils.createWaitStrategy(properties.getWaitStrategy());
-        ProducerType producerType = DisruptorUtils.createProducerType(properties.getProducerType());
+        int ringBufferSize = DisruptorUtils.nextPowerOfTwo(disruptorConfig.getRingBufferSize());
+        String disruptorConfigWaitStrategy = disruptorConfig.getWaitStrategy();
+        WaitStrategy waitStrategy = DisruptorUtils.createWaitStrategy(disruptorConfigWaitStrategy);
+        String configProducerType = disruptorConfig.getProducerType();
+        ProducerType producerType = DisruptorUtils.createProducerType(configProducerType);
 
         Disruptor<DisruptorBatchEvent> batchDisruptor = new Disruptor<>(
                 new DisruptorBatchEventFactory(),
@@ -214,7 +217,7 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
         // 保存引用
         batchDisruptors.put(topic, batchDisruptor);
         batchRingBuffers.put(topic, batchRingBuffer);
-         log.info("Disruptor批量订阅成功 - Topic: {}, 批次大小: {}, 超时时间: {}ms", topic, properties.getBatch().getBatchSize(), properties.getBatch().getBatchTimeoutMs());
+        log.info("Disruptor批量订阅成功 - Topic: {}, 批次大小: {}, 超时时间: {}ms", topic, disruptorConfig.getBatch().getBatchSize(), disruptorConfig.getBatch().getBatchTimeoutMs());
     }
 
     /**
@@ -251,9 +254,11 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
     private RingBuffer<DisruptorMessageEvent> getOrCreateMessageRingBuffer(String topic) {
         return messageRingBuffers.computeIfAbsent(topic, t -> {
             // 创建临时的Disruptor用于发送
-            int ringBufferSize = DisruptorUtils.nextPowerOfTwo(properties.getRingBufferSize());
-            WaitStrategy waitStrategy = DisruptorUtils.createWaitStrategy(properties.getWaitStrategy());
-            ProducerType producerType = DisruptorUtils.createProducerType(properties.getProducerType());
+            int ringBufferSize = DisruptorUtils.nextPowerOfTwo(disruptorConfig.getRingBufferSize());
+            String disruptorConfigWaitStrategy = disruptorConfig.getWaitStrategy();
+            WaitStrategy waitStrategy = DisruptorUtils.createWaitStrategy(disruptorConfigWaitStrategy);
+            String configProducerType = disruptorConfig.getProducerType();
+            ProducerType producerType = DisruptorUtils.createProducerType(configProducerType);
 
             Disruptor<DisruptorMessageEvent> disruptor = new Disruptor<>(
                     new DisruptorMessageEventFactory(),
@@ -295,9 +300,9 @@ public class DisruptorMessageQueueTemplate implements MessageQueueTemplate {
         java.util.Map<String, Object> stats = new java.util.HashMap<>();
         stats.put("activeTopics", messageRingBuffers.size());
         stats.put("activeBatchTopics", batchRingBuffers.size());
-        stats.put("ringBufferSize", properties.getRingBufferSize());
-        stats.put("waitStrategy", properties.getWaitStrategy());
-        stats.put("producerType", properties.getProducerType());
+        stats.put("ringBufferSize", disruptorConfig.getRingBufferSize());
+        stats.put("waitStrategy", disruptorConfig.getWaitStrategy());
+        stats.put("producerType", disruptorConfig.getProducerType());
 
         // 单消息统计
         java.util.Map<String, Object> messageStats = new java.util.HashMap<>();

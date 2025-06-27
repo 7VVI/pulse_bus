@@ -1,8 +1,7 @@
 package com.kronos.pulsBbus.core;
 
+import com.kronos.pulsBbus.core.properties.BaseProviderConfig;
 import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
-
-import java.util.Map;
 
 /**
  * @author zhangyh
@@ -24,7 +23,7 @@ public interface MessageQueueProvider {
     /**
      * 初始化提供者
      */
-    void initialize(Map<String, Object> config);
+    <T extends BaseProviderConfig> void initialize(T config);
 
     /**
      * 健康检查

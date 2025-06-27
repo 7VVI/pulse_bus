@@ -7,7 +7,6 @@ import java.util.Map;
  * @Date 2025/5/28 15:29
  * @desc
  */
-@org.springframework.stereotype.Component
 public class MessageQueueMetrics {
 
     // 原有指标

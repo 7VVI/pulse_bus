@@ -2,12 +2,11 @@ package com.kronos.pulsBbus.disruptor;
 
 import com.kronos.pulsBbus.core.MessageQueueProvider;
 import com.kronos.pulsBbus.core.monitor.MessageQueueMetrics;
-import com.kronos.pulsBbus.core.properties.MessageQueueProperties;
+import com.kronos.pulsBbus.core.properties.BaseProviderConfig;
 import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
+import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 /**
  * @author zhangyh
@@ -23,22 +22,19 @@ public class DisruptorMessageQueueProvider implements MessageQueueProvider {
 
     private static final Logger log = LoggerFactory.getLogger(DisruptorMessageQueueProvider.class);
 
-    private final MessageQueueProperties properties;
-    private final MessageQueueMetrics    metrics;
-    private final DisruptorProperties    disruptorProperties;
-    private final DisruptorRetryHandler retryHandler;
+    @Resource
+    private MessageQueueMetrics metrics;
 
-    private DisruptorMessageQueueTemplate template;
-    private volatile boolean initialized = false;
+    @Resource
+    private DisruptorRetryHandler retryHandler;
 
-    public DisruptorMessageQueueProvider(MessageQueueProperties properties,
-                                         MessageQueueMetrics metrics,
-                                         DisruptorProperties disruptorProperties,
-                                         DisruptorRetryHandler retryHandler) {
-        this.properties = properties;
-        this.metrics = metrics;
-        this.disruptorProperties = disruptorProperties;
-        this.retryHandler = retryHandler;
+    @Resource
+    private          DisruptorMessageQueueTemplate template;
+    private volatile boolean                       initialized = false;
+
+
+    public DisruptorMessageQueueProvider() {
+
     }
 
     @Override
@@ -55,19 +51,20 @@ public class DisruptorMessageQueueProvider implements MessageQueueProvider {
     }
 
     @Override
-    public void initialize(Map<String, Object> config) {
+    public <T extends BaseProviderConfig> void initialize(T config) {
         if (initialized) {
             return;
         }
+        DisruptorProperties properties = (DisruptorProperties) config;
 
         try {
             log.info(">>>>>> 初始化Disruptor消息队列提供者...");
 
             // 验证配置
-            validateConfiguration();
+            validateConfiguration(properties);
 
             // 创建Disruptor模板
-            this.template = new DisruptorMessageQueueTemplate(disruptorProperties, metrics, retryHandler);
+            this.template = new DisruptorMessageQueueTemplate(properties, metrics, retryHandler);
 
             this.initialized = true;
             log.info("<<<<<< Disruptor消息队列提供者初始化成功");
@@ -99,7 +96,7 @@ public class DisruptorMessageQueueProvider implements MessageQueueProvider {
     /**
      * 验证配置
      */
-    private void validateConfiguration() {
+    private void validateConfiguration(DisruptorProperties disruptorProperties) {
         if (!DisruptorUtils.isPowerOfTwo(disruptorProperties.getRingBufferSize())) {
             throw new IllegalArgumentException("RingBuffer大小必须是2的幂: " + disruptorProperties.getRingBufferSize());
         }

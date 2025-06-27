@@ -12,17 +12,17 @@ public class DisruptorUtils {
     /**
      * 创建等待策略
      */
-    public static WaitStrategy createWaitStrategy(DisruptorProperties.WaitStrategyType type) {
+    public static WaitStrategy createWaitStrategy(String type) {
         switch (type) {
-            case BLOCKING:
+            case "BLOCKING":
                 return new BlockingWaitStrategy();
-            case BUSY_SPIN:
+            case "BUSY_SPIN":
                 return new BusySpinWaitStrategy();
-            case YIELDING:
+            case "YIELDING":
                 return new YieldingWaitStrategy();
-            case SLEEPING:
+            case "SLEEPING":
                 return new SleepingWaitStrategy();
-            case TIMEOUT_BLOCKING:
+            case "TIMEOUT_BLOCKING":
                 return new TimeoutBlockingWaitStrategy(5, java.util.concurrent.TimeUnit.SECONDS);
             default:
                 return new BlockingWaitStrategy();
@@ -32,11 +32,11 @@ public class DisruptorUtils {
     /**
      * 创建生产者类型
      */
-    public static com.lmax.disruptor.dsl.ProducerType createProducerType(DisruptorProperties.ProducerType type) {
+    public static com.lmax.disruptor.dsl.ProducerType createProducerType(String type) {
         switch (type) {
-            case SINGLE:
+            case "SINGLE":
                 return com.lmax.disruptor.dsl.ProducerType.SINGLE;
-            case MULTI:
+            case "MULTI":
                 return com.lmax.disruptor.dsl.ProducerType.MULTI;
             default:
                 return com.lmax.disruptor.dsl.ProducerType.MULTI;

@@ -2,6 +2,7 @@ package com.kronos.pulsBbus.disruptor;
 
 import com.kronos.pulsBbus.core.Message;
 import com.kronos.pulsBbus.core.batch.BatchConsumeResult;
+import com.kronos.pulsBbus.core.properties.MessageQueueProperties;
 import com.kronos.pulsBbus.disruptor.batch.DisruptorBatchEvent;
 import com.kronos.pulsBbus.disruptor.single.DisruptorMessageEvent;
 import org.slf4j.Logger;
@@ -17,11 +18,11 @@ public class DisruptorRetryHandler {
 
     private static final Logger log = LoggerFactory.getLogger(DisruptorRetryHandler.class);
 
-    private final DisruptorProperties properties;
+    private final DisruptorProperties         disruptorConfig;
     private final java.util.concurrent.ScheduledExecutorService retryExecutor;
 
-    public DisruptorRetryHandler(DisruptorProperties properties) {
-        this.properties = properties;
+    public DisruptorRetryHandler(MessageQueueProperties properties) {
+        this.disruptorConfig = properties.getProviders().getDisruptor();
         this.retryExecutor = java.util.concurrent.Executors.newScheduledThreadPool(2, r -> {
             Thread t = new Thread(r, "Disruptor-Retry");
             t.setDaemon(true);
@@ -36,7 +37,7 @@ public class DisruptorRetryHandler {
         Message message = event.getMessage();
         int currentRetryCount = event.getRetryCount();
 
-        if (currentRetryCount < properties.getRetry().getMaxRetryCount()) {
+        if (currentRetryCount < disruptorConfig.getRetry().getMaxRetryCount()) {
             // 计算重试延迟
             long delay = calculateRetryDelay(currentRetryCount);
 
@@ -75,7 +76,7 @@ public class DisruptorRetryHandler {
 
         for (Message message : event.getMessages()) {
             if (failedIds.contains(message.getId())) {
-                if (message.getRetryCount() < properties.getRetry().getMaxRetryCount()) {
+                if (message.getRetryCount() < disruptorConfig.getRetry().getMaxRetryCount()) {
                     message.setRetryCount(message.getRetryCount() + 1);
                     failedMessages.add(message);
                 } else {
@@ -95,7 +96,7 @@ public class DisruptorRetryHandler {
     public void handleBatchException(DisruptorBatchEvent event, Exception e) {
         // 将整个批次进行重试
         for (Message message : event.getMessages()) {
-            if (message.getRetryCount() < properties.getRetry().getMaxRetryCount()) {
+            if (message.getRetryCount() < disruptorConfig.getRetry().getMaxRetryCount()) {
                 message.setRetryCount(message.getRetryCount() + 1);
             } else {
                 sendToDeadLetterQueue(message);
@@ -110,9 +111,9 @@ public class DisruptorRetryHandler {
      * 计算重试延迟
      */
     private long calculateRetryDelay(int retryCount) {
-        long baseDelay = properties.getRetry().getRetryDelayMs();
-        double multiplier = properties.getRetry().getRetryMultiplier();
-        long maxDelay = properties.getRetry().getMaxRetryDelayMs();
+        long baseDelay = disruptorConfig.getRetry().getRetryDelayMs();
+        double multiplier = disruptorConfig.getRetry().getRetryMultiplier();
+        long maxDelay = disruptorConfig.getRetry().getMaxRetryDelayMs();
 
         long delay = (long) (baseDelay * Math.pow(multiplier, retryCount));
         return Math.min(delay, maxDelay);

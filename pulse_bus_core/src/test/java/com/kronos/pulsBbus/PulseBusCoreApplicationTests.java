@@ -1,10 +1,12 @@
 package com.kronos.pulsBbus;
 
-import com.kronos.pulsBbus.core.*;
+import com.kronos.pulsBbus.core.ConsumeResult;
+import com.kronos.pulsBbus.core.Message;
+import com.kronos.pulsBbus.core.MessageQueueManager;
+import com.kronos.pulsBbus.core.batch.BatchConsumeConfig;
 import com.kronos.pulsBbus.core.batch.BatchConsumeResult;
 import com.kronos.pulsBbus.core.batch.BatchSupportMessageTemplate;
-import com.kronos.pulsBbus.core.batch.BatchConsumeConfig;
-import com.kronos.pulsBbus.core.ConsumeResult;
+import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -72,4 +74,26 @@ class PulseBusCoreApplicationTests {
         }
     }
 
+    @Resource
+    private MessageQueueManager messageQueueManager;
+
+    @Test
+    void testTemplate() throws InterruptedException {
+        MessageQueueTemplate template = messageQueueManager.getTemplate();
+        new Thread(() -> {
+            for (int i = 0; i < 50000; i++) {
+                template.send("order.topic", "订单数据" + i);
+            }
+
+        }).start();
+
+        new Thread(() -> {
+            template.subscribe("order.topic", message -> {
+                System.out.println("收到消息: " + message.getPayload());
+                return ConsumeResult.SUCCESS;
+            });
+        }).start();
+
+        Thread.sleep(5000);
+    }
 }

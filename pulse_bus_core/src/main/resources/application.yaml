@@ -11,9 +11,9 @@ message:
       max-retry-count: 3
     providers:
       disruptor:
-        buffer-size: 2048
-        wait-strategy: BlockingWaitStrategy
-        consumer-threads: 4
+        ringBufferSize: 2048
+        waitStrategy: BlockingWaitStrategy
+        consumerThreadPoolSize: 4
         enable-metrics: true
       redis:
         host: localhost

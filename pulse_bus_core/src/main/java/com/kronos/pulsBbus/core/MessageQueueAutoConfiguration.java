@@ -28,8 +28,8 @@ public class MessageQueueAutoConfiguration {
 
     @org.springframework.context.annotation.Bean
     @org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
-    public MessageQueueManager messageQueueManager(MessageQueueProperties properties, MessageQueueMetrics metrics) {
-        return new MessageQueueManager(properties, metrics);
+    public MessageQueueManager messageQueueManager(MessageQueueProperties properties) {
+        return new MessageQueueManager(properties);
     }
 
     @org.springframework.context.annotation.Bean
