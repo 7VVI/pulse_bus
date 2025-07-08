@@ -1,12 +1,15 @@
 package com.kronos.pulsBbus.redis;
 
 import com.kronos.pulsBbus.core.MessageQueueProvider;
+import com.kronos.pulsBbus.core.delay.DelayMessageProcessor;
 import com.kronos.pulsBbus.core.monitor.MessageQueueMetrics;
 import com.kronos.pulsBbus.core.properties.BaseProviderConfig;
+import com.kronos.pulsBbus.core.retry.RetryMessageProcessor;
 import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -29,6 +32,12 @@ public class RedisProvider implements MessageQueueProvider {
 
     @Resource
     private MessageQueueMetrics metrics;
+    
+    @Autowired(required = false)
+    private DelayMessageProcessor delayMessageProcessor;
+
+    @Autowired(required = false)
+    private RetryMessageProcessor retryMessageProcessor;
 
     private RedisTemplate<String, Object> redisTemplate;
     private RedisTemplateAdapter template;
@@ -65,7 +74,8 @@ public class RedisProvider implements MessageQueueProvider {
             this.redisTemplate = createRedisTemplate(connectionFactory);
             
             // 创建模板适配器
-            this.template = new RedisTemplateAdapter(redisTemplate, properties, metrics);
+            this.template = new RedisTemplateAdapter(redisTemplate, properties, metrics, 
+                    delayMessageProcessor, retryMessageProcessor);
             
             this.initialized = true;
             log.info("Redis消息队列提供者初始化成功");

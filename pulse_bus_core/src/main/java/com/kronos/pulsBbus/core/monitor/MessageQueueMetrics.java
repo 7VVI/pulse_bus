@@ -209,6 +209,72 @@ public class MessageQueueMetrics {
         return result;
     }
 
+    // ==================== 延迟消息和重试消息指标方法 ====================
+
+    /**
+     * 记录延迟消息发送
+     * @param topic 主题
+     */
+    public void recordDelayMessageSent(String topic) {
+        consumeResultMetrics.computeIfAbsent(topic + ":delay_sent", k -> new java.util.concurrent.atomic.AtomicLong(0)).incrementAndGet();
+    }
+
+    /**
+     * 记录延迟消息处理成功
+     * @param topic 主题
+     */
+    public void recordDelayMessageProcessed(String topic) {
+        consumeResultMetrics.computeIfAbsent(topic + ":delay_processed", k -> new java.util.concurrent.atomic.AtomicLong(0)).incrementAndGet();
+    }
+
+    /**
+     * 记录延迟消息处理失败
+     * @param topic 主题
+     */
+    public void recordDelayMessageFailed(String topic) {
+        consumeResultMetrics.computeIfAbsent(topic + ":delay_failed", k -> new java.util.concurrent.atomic.AtomicLong(0)).incrementAndGet();
+    }
+
+    /**
+     * 记录重试消息发送
+     * @param topic 主题
+     */
+    public void recordRetryMessageSent(String topic) {
+        consumeResultMetrics.computeIfAbsent(topic + ":retry_sent", k -> new java.util.concurrent.atomic.AtomicLong(0)).incrementAndGet();
+    }
+
+    /**
+     * 记录重试消息处理成功
+     * @param topic 主题
+     */
+    public void recordRetryMessageProcessed(String topic) {
+        consumeResultMetrics.computeIfAbsent(topic + ":retry_processed", k -> new java.util.concurrent.atomic.AtomicLong(0)).incrementAndGet();
+    }
+
+    /**
+     * 记录重试消息处理失败
+     * @param topic 主题
+     */
+    public void recordRetryMessageFailed(String topic) {
+        consumeResultMetrics.computeIfAbsent(topic + ":retry_failed", k -> new java.util.concurrent.atomic.AtomicLong(0)).incrementAndGet();
+    }
+
+    /**
+     * 记录消息发送成功（通用）
+     * @param topic 主题
+     */
+    public void recordMessageSent(String topic) {
+        recordSentMessage(topic);
+    }
+
+    /**
+     * 记录消息发送失败（通用）
+     * @param topic 主题
+     */
+    public void recordMessageSendFailed(String topic) {
+        recordFailedMessage(topic);
+    }
+
     // ==================== 新增统计方法 ====================
 
     /**

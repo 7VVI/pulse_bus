@@ -95,6 +95,7 @@ public class RedisProperties implements BaseProviderConfig {
         private double retryMultiplier = 2.0;
         private long   maxRetryDelayMs = 30000;
         private String retryQueueKey   = "pulse:bus:retry:queue";
+        private long   scanIntervalMs  = 1000;
     }
 
     @Data
