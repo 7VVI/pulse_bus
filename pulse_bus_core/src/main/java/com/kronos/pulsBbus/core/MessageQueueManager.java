@@ -1,5 +1,6 @@
 package com.kronos.pulsBbus.core;
 
+import com.kronos.pulsBbus.core.monitor.MessageQueueMetrics;
 import com.kronos.pulsBbus.core.properties.MessageQueueProperties;
 import com.kronos.pulsBbus.core.properties.Providers;
 import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
@@ -8,6 +9,9 @@ import com.kronos.pulsBbus.disruptor.DisruptorProperties;
 import com.kronos.pulsBbus.kafka.KafkaMessageQueueProvider;
 import com.kronos.pulsBbus.kafka.KafkaProperties;
 import com.kronos.pulsBbus.redis.RedisProvider;
+import com.kronos.pulsBbus.redis.RedisProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -18,12 +22,22 @@ import java.util.Map;
  */
 public class MessageQueueManager {
 
+    private static final Logger log = LoggerFactory.getLogger(MessageQueueManager.class);
+    
     private final Map<String, MessageQueueProvider> providers = new java.util.concurrent.ConcurrentHashMap<>();
     private final MessageQueueProperties            properties;
+    private final MessageQueueMetrics               metrics;
     private       MessageQueueTemplate              defaultTemplate;
 
     public MessageQueueManager(MessageQueueProperties properties) {
         this.properties = properties;
+        this.metrics = new MessageQueueMetrics();
+        this.initializeProviders();
+    }
+    
+    public MessageQueueManager(MessageQueueProperties properties, MessageQueueMetrics metrics) {
+        this.properties = properties;
+        this.metrics = metrics;
         this.initializeProviders();
     }
 
@@ -37,7 +51,7 @@ public class MessageQueueManager {
         
         // 初始化Disruptor提供者
         DisruptorProperties disruptor = propertiesProviders.getDisruptor();
-        Boolean isDisruptorEnabled = disruptor.getIsEnable();
+        Boolean isDisruptorEnabled = disruptor.isEnable();
         if (isDisruptorEnabled) {
             String providerName = disruptor.getName();
             MessageQueueProvider provider = createProvider(providerName);
@@ -53,7 +67,7 @@ public class MessageQueueManager {
         
         // 初始化Kafka提供者
         KafkaProperties kafka = propertiesProviders.getKafka();
-        Boolean isKafkaEnabled = kafka.getIsEnable();
+        Boolean isKafkaEnabled = kafka.isEnable();
         if (isKafkaEnabled) {
             String providerName = kafka.getName();
             MessageQueueProvider provider = createProvider(providerName);
@@ -64,6 +78,28 @@ public class MessageQueueManager {
                 if (providerName.equals(defaultProvider)) {
                     this.defaultTemplate = provider.getTemplate();
                 }
+            }
+        }
+        
+        // 初始化Redis提供者
+        RedisProperties redis = propertiesProviders.getRedis();
+        Boolean isRedisEnabled = redis.isEnable();
+        if (isRedisEnabled) {
+            try {
+                String providerName = redis.getName();
+                RedisProvider redisProvider = new RedisProvider();
+                redisProvider.initialize(redis);
+                providers.put(providerName, redisProvider);
+                
+                if (providerName.equals(defaultProvider)) {
+                    this.defaultTemplate = redisProvider.getTemplate();
+                }
+                
+                log.info("Redis消息队列提供者初始化成功");
+            } catch (Exception e) {
+                log.error("Redis消息队列提供者初始化失败", e);
+                // Redis提供者初始化失败时的处理
+                throw new RuntimeException("Redis消息队列提供者初始化失败", e);
             }
         }
     }

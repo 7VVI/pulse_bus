@@ -8,7 +8,8 @@ package com.kronos.pulsBbus.core;
 public enum ProviderEnum {
 
     DISRUPTOR,
-    KAFKA;
+    KAFKA,
+    REDIS;
 
 
 }
