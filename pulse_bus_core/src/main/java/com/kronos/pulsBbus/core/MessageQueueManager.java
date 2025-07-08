@@ -5,6 +5,8 @@ import com.kronos.pulsBbus.core.properties.Providers;
 import com.kronos.pulsBbus.core.single.MessageQueueTemplate;
 import com.kronos.pulsBbus.disruptor.DisruptorMessageQueueProvider;
 import com.kronos.pulsBbus.disruptor.DisruptorProperties;
+import com.kronos.pulsBbus.kafka.KafkaMessageQueueProvider;
+import com.kronos.pulsBbus.kafka.KafkaProperties;
 import com.kronos.pulsBbus.redis.RedisProvider;
 
 import java.util.Map;
@@ -32,13 +34,31 @@ public class MessageQueueManager {
         // 根据配置初始化提供者
         String defaultProvider = properties.getDefaultProvider();
         Providers propertiesProviders = properties.getProviders();
+        
+        // 初始化Disruptor提供者
         DisruptorProperties disruptor = propertiesProviders.getDisruptor();
-        Boolean isEnabled = disruptor.getIsEnable();
-        if (isEnabled) {
+        Boolean isDisruptorEnabled = disruptor.getIsEnable();
+        if (isDisruptorEnabled) {
             String providerName = disruptor.getName();
             MessageQueueProvider provider = createProvider(providerName);
             if (provider != null) {
                 provider.initialize(disruptor);
+                providers.put(providerName, provider);
+
+                if (providerName.equals(defaultProvider)) {
+                    this.defaultTemplate = provider.getTemplate();
+                }
+            }
+        }
+        
+        // 初始化Kafka提供者
+        KafkaProperties kafka = propertiesProviders.getKafka();
+        Boolean isKafkaEnabled = kafka.getIsEnable();
+        if (isKafkaEnabled) {
+            String providerName = kafka.getName();
+            MessageQueueProvider provider = createProvider(providerName);
+            if (provider != null) {
+                provider.initialize(kafka);
                 providers.put(providerName, provider);
 
                 if (providerName.equals(defaultProvider)) {
@@ -61,7 +81,7 @@ public class MessageQueueManager {
             case "disruptor":
                 return new DisruptorMessageQueueProvider();
             case "kafka":
-                // return new KafkaProvider();
+                return new KafkaMessageQueueProvider();
             default:
                 return null;
         }
